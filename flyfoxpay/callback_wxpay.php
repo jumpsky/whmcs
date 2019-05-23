@@ -84,7 +84,10 @@ if($json['sign']==$sign1){
 	  $amount = convert_helper( $invoiceid, $fee);
     addInvoicePayment($invoiceid,$security['trade_no'],trim($amount),$fee,$typess);
     logTransaction($GATEWAY["name"], $_REQUEST, "Successful");
-    echo 'success';
+   if($_POST['orderid']!=='' OR $_POST['orderid']!==null){
+               header('Content-Type: application/json');
+               echo '{"ok":"ok"}';}else{
+               echo 'success';}
 } else {
     echo 'fail'.$output.'/'.$sign1;
 }
