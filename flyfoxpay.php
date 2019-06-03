@@ -3,7 +3,7 @@ use WHMCS\Database\Capsule;
 
 function flyfoxpay_wxpay_MetaData() {
     return array(
-        'DisplayName' => '翔狐科技(支付宝)',
+        'DisplayName' => '翔狐科技',
         'APIVersion' => '1.1',
     );
 }
@@ -12,7 +12,7 @@ function flyfoxpay_wxpay_config() {
     $configarray = array(
         "FriendlyName"  => array(
             "Type"  => "System",
-            "Value" => "翔狐科技(微信)"
+            "Value" => "翔狐科技"
         ),
         "account"  => array(
             "FriendlyName" => "商户邮箱",
@@ -48,7 +48,7 @@ function flyfoxpay_wxpay_link($params) {
 		 $security['go']      = '1';
 		$security['return']      = $params['returnurl'];
 		$o='';
-$sHtml = "<form id='alipaysubmit' name='alipaysubmit' action='https://sc-i.pw/api/' method='post'>";
+$sHtml = "<form id='alipaysubmit' name='alipaysubmit' action='https://api.flyfoxpay.com/api/' method='post'>";
 	   while (list ($key, $val) = each ($security)) {
             $sHtml.= "<input type='hidden' name='".$key."' value='".$val."'/>";
        }
