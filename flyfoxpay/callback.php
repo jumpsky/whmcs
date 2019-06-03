@@ -14,7 +14,7 @@ if (!$GATEWAY["type"]) die("fail");
 $security['orderid'] = $_REQUEST['orderid'];
 //手续费
 $fee = 0;
-$url = "https://sc-i.pw/api/check/";//API位置
+$url = "https://api.flyfoxpay.com/api/check/";//API位置
  
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $url);
@@ -63,7 +63,7 @@ $security['out_trade_no'] = $json['customize1'];
 $security['trade_no'] = $json['trade_no'];
 $amount= $json['money'];
 $typesfa= $json['type'];
-if($typesfa=="o_alipay"){$typess='flyfoxpay_alipay';}elseif($typesfa=="o_wxpay"){$typess='flyfoxpay_wxpay';}
+$typess='flyfoxpay_wxpay';
 if($json['sign']==$sign1){
     $invoiceid = checkCbInvoiceID($security['out_trade_no'], $GATEWAY["name"]);
     checkCbTransID($security['out_trade_no']);
