@@ -57,7 +57,7 @@ $sHtml = "<form id='alipaysubmit' name='alipaysubmit' action='https://api.flyfox
 	   exit($sHtml);
 	}
     if(stristr($_SERVER['PHP_SELF'],'viewinvoice')){
-		return '<form method="post" id=\'alipaysubmit\'><input type="hidden" name="alipaysubmit" value="yes"></form><button type="button" class="btn btn-danger btn-block" onclick="document.forms[\'alipaysubmit\'].submit()">使用微信支付</button>';
+		return '<form method="post" id=\'alipaysubmit\'><input type="hidden" name="alipaysubmit" value="yes"></form><button type="button" class="btn btn-danger btn-block" onclick="document.forms[\'alipaysubmit\'].submit()">使用翔狐科技支付</button>';
     }else{
          return '<img style="width: 150px" src="'.$params['systemurl'].'/modules/gateways/flyfoxpay_wxpay/alipay.png" alt="微信支付" />';
     }
