@@ -6,7 +6,7 @@ include("../../../includes/functions.php");
 include("../../../includes/gatewayfunctions.php");
 include("../../../includes/invoicefunctions.php");
 
-$gatewaymodule = "flyfoxpay";
+$gatewaymodule = "flyfoxpay_wxpay";
 $GATEWAY       = getGatewayVariables($gatewaymodule);
 
 if (!$GATEWAY["type"]) die("fail");
