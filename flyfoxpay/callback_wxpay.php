@@ -10,63 +10,22 @@ $gatewaymodule = "flyfoxpay_wxpay";
 $GATEWAY       = getGatewayVariables($gatewaymodule);
 
 if (!$GATEWAY["type"]) die("fail");
+	  //实例化支付类
+$pay = new Pays($GATEWAY['mchid'], $GATEWAY['key']);
 
-$security['orderid'] = $_REQUEST['orderid'];
-//手续费
-$fee = 0;
-$url = "https://api.flyfoxpay.com/api/check/";//API位置
- 
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:38.0) Gecko/20100101 Firefox/38.0');
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(
- array("key"=>$GATEWAY["key"], //商家KEY
-       "id"=>$GATEWAY["mchid"], //商家ID
-       "mail"=>$GATEWAY["account"], //商家EMAIL
-       "trade_no"=>$_REQUEST['orderid'], //商家訂單ID
-       ))); 
-$output = curl_exec($ch); 
-curl_close($ch);
-/*
-回傳格式:
-//成功
-{"status":"200","status_trade":"noapy","sign":"90e5f1f7ef87cd2e43729ba4378656b5"}
-{"status":"200","trade_no":"1278217527512","type":"o_alipay","status_trade":"payok","sign":"*****"}
-//以下為錯誤項目
-{"status":"404","error":"未設置KEY或是ID或MAIL"}
-{"status":"400","error":"請檢查ID或是KEY或MAIL是否有誤"}
-{"status":"416","error":"請檢查訂單ID是否有誤"}
-*/ 
-$security1  = array();
+//接收异步通知数据
+$data = $_GET;
 
-$security1['mchid']      = $GATEWAY["mchid"];//商家ID
+//商户订单号
+$out_trade_no = $data['out_trade_no'];
 
-$security1['status']        = "7";//驗證，請勿更改
-
-$security1['mail']      = $GATEWAY["account"];//商家EMAIL
-
-$security1['trade_no']      = $security['orderid'];//商家訂單ID
-
-foreach ($security1 as $k=>$v)
-
-{
-
-    $o.= "$k=".($v)."&";
-
-}
-
-$sign1 = md5(substr($o,0,-1).$GATEWAY["key"]);//**********請替換成商家KEY
-$json=json_decode($output, true);
-$security['out_trade_no'] = $json['customize1'];
-$security['trade_no'] = $json['trade_no'];
-$amount= $json['money'];
-$typesfa= $json['type'];
-$typess='flyfoxpay_wxpay';
-if($json['sign']==$sign1){
-    $invoiceid = checkCbInvoiceID($security['out_trade_no'], $GATEWAY["name"]);
-    checkCbTransID($security['out_trade_no']);
+//验证签名
+if ($pay->verify($data)) {
+    //验证支付状态
+    if ($data['trade_status'] == 'TRADE_SUCCESS') {
+    
+		$invoiceid = checkCbInvoiceID($out_trade_no, $GATEWAY["name"]);
+    checkCbTransID($out_trade_no);
 	function convert_helper($invoiceid,$amount){
     $setting = Capsule::table("tblpaymentgateways")->where("gateway",$gatewaymodule)->where("setting","convertto")->first();
     ///系统没多货币 , 直接返回
@@ -82,12 +41,12 @@ if($json['sign']==$sign1){
     return  convertCurrency( $amount , $setting->value  ,$currency["id"] );
 }
 	  $amount = convert_helper( $invoiceid, $fee);
-    addInvoicePayment($invoiceid,$security['trade_no'],trim($amount),$fee,$typess);
+    addInvoicePayment($invoiceid,$data['trade_no'],trim($amount),$fee,$typess);
     logTransaction($GATEWAY["name"], $_REQUEST, "Successful");
-   if($_POST['orderid']!=='' OR $_POST['orderid']!==null){
-               header('Content-Type: application/json');
-               echo '{"ok":"ok"}';}else{
-               echo 'success';}
+    echo 'success';
+        //这里就可以放心的处理您的业务流程了
+        //您可以通过上面的商户订单号进行业务流程处理
+    }
 } else {
-    echo 'fail'.$output.'/'.$sign1;
+    echo '錯誤';
 }
