@@ -1,9 +1,86 @@
 <?php
 use WHMCS\Database\Capsule;
+class Pays
+{
+    private $pid;
+    private $key;
 
+    public function __construct($pid, $key)
+    {
+        $this->pid = $pid;
+        $this->key = $key;
+    }
+
+    /**
+     * @Note  支付发起
+     * @param $type   支付方式
+     * @param $out_trade_no     订单号
+     * @param $notify_url     异步通知地址
+     * @param $return_url     回调通知地址
+     * @param $name     商品名称
+     * @param $money     金额
+     * @param $sitename     站点名称
+     * @return string
+     */
+    public function submit($type, $out_trade_no, $notify_url, $return_url, $name, $money, $sitename)
+    {
+        $data = [
+            'pid' => $this->pid,
+            'type' => $type,
+            'out_trade_no' => $out_trade_no,
+            'notify_url' => $notify_url,
+            'return_url' => $return_url,
+            'name' => $name,
+            'money' => $money,
+            'sitename' => $sitename
+        ];
+        $string = http_build_query($data);
+        $sign = $this->getsign($data);
+        return 'https://pay.ncepay.com/submit.php?' . $string . '&sign=' . $sign . '&sign_type=MD5';
+    }
+
+    /**
+     * @Note   验证签名
+     * @param $data  待验证参数
+     * @return bool
+     */
+    public function verify($data)
+    {
+        if (!isset($data['sign']) || !$data['sign']) {
+            return false;
+        }
+        $sign = $data['sign'];
+        unset($data['sign']);
+        unset($data['sign_type']);
+        $sign2 = $this->getSign($data, $this->key);
+        if ($sign != $sign2) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @Note  生成签名
+     * @param $data   参与签名的参数
+     * @return string
+     */
+    private function getSign($data)
+    {
+        $data = array_filter($data);
+        ksort($data);
+        $str1 = '';
+        foreach ($data as $k => $v) {
+            $str1 .= '&' . $k . "=" . $v;
+        }
+        $str = $str1 . $this->key;
+        $str = trim($str, '&');
+        $sign = md5($str);
+        return $sign;
+    }
+}
 function flyfoxpay_wxpay_MetaData() {
     return array(
-        'DisplayName' => '翔狐科技',
+        'DisplayName' => '聚合收款',
         'APIVersion' => '1.1',
     );
 }
@@ -12,23 +89,19 @@ function flyfoxpay_wxpay_config() {
     $configarray = array(
         "FriendlyName"  => array(
             "Type"  => "System",
-            "Value" => "翔狐科技"
+            "Value" => "聚合收款"
         ),
-        "account"  => array(
-            "FriendlyName" => "商户邮箱",
+       "mchid" => array(
+            "FriendlyName" => "商户ID",
             "Type"         => "text",
-            "Size"         => "32",
+            "Size"         => "128",
         ),
         "key" => array(
             "FriendlyName" => "商户KEY",
-            "Type"         => "password",
-            "Size"         => "32",
-        ),
-        "mchid" => array(
-            "FriendlyName" => "商户ID",
             "Type"         => "text",
-            "Size"         => "32",
+            "Size"         => "128",
         )
+        
     );
 
     return $configarray;
@@ -36,30 +109,39 @@ function flyfoxpay_wxpay_config() {
 
 function flyfoxpay_wxpay_link($params) {
     if($_REQUEST['alipaysubmit'] == 'yes'){
-		$security  = array();
-       $security['id']      = $params['mchid'];
-       $security['mail']    = $params['account'];
-       $security['keys']        = md5($params['key']);
-       $security['trade_name']       = 'whmcs'.time();
-       $security['trade_no']      = 'whmcs'.time();
-       $security['customize1']      = $params['invoiceid'];
-		 $security['amount']      = $params['amount'];
-		$security['type']      = 'o_wxpay';
-		 $security['go']      = '1';
-		$security['return']      = $params['returnurl'];
-		$o='';
-$sHtml = "<form id='alipaysubmit' name='alipaysubmit' action='https://api.flyfoxpay.com/api/' method='post'>";
-	   while (list ($key, $val) = each ($security)) {
-            $sHtml.= "<input type='hidden' name='".$key."' value='".$val."'/>";
-       }
-       $sHtml = $sHtml."<input type='submit' value='正在跳转'></form>";
-	   $sHtml = $sHtml."<script>document.forms['alipaysubmit'].submit();</script>";
+	
+	   $pay = new Pays($params['mchid'], $params['key']);
+
+//支付方式
+$type = 'all';
+
+//订单号
+$out_trade_no = $params['invoiceid'];
+
+//异步通知地址
+$notify_url = 'https://'.$_SERVER['HTTP_HOST'].'/modules/gateways/flyfoxpay/callback_wxpay.php';
+
+//回调通知地址
+$return_url = $params['returnurl'];
+
+//商品名称
+$name = 'SS-'.$_SERVER['HTTP_HOST'];
+
+//支付金额（保留小数点后两位）
+$money = $params['amount'];
+
+//站点名称
+$sitename = $_SERVER['HTTP_HOST'];
+
+//发起支付
+$url = $pay->submit($type, $out_trade_no, $notify_url, $return_url, $name, $money, $sitename);
+		$sHtml = "<script language='javascript' type='text/javascript'>window.location.href='".$url."';</script>";
 	   exit($sHtml);
 	}
     if(stristr($_SERVER['PHP_SELF'],'viewinvoice')){
-		return '<form method="post" id=\'alipaysubmit\'><input type="hidden" name="alipaysubmit" value="yes"></form><button type="button" class="btn btn-danger btn-block" onclick="document.forms[\'alipaysubmit\'].submit()">使用翔狐科技支付</button>';
+		return '<form method="post" id=\'alipaysubmit\'><input type="hidden" name="alipaysubmit" value="yes"></form><button type="button" class="btn btn-danger btn-block" onclick="document.forms[\'alipaysubmit\'].submit()">使用聚合收款支付</button>';
     }else{
-         return '<img style="width: 150px" src="'.$params['systemurl'].'/modules/gateways/flyfoxpay_wxpay/alipay.png" alt="微信支付" />';
+         return '<img style="width: 150px" src="'.$params['systemurl'].'/modules/gateways/flyfoxpay_wxpay/alipay.png" alt="聚合收款" />';
     }
 
 }
